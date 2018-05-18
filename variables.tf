@@ -1,3 +1,5 @@
+variable "prefix" {}
+
 variable "autoscaling_group_name" {}
 
 variable "lambda_enabled" {

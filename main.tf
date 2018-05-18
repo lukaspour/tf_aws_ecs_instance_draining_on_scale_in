@@ -1,5 +1,5 @@
 resource "aws_iam_role" "sns" {
-  name = "${var.autoscaling_group_name}-notifies-sns"
+  name = "${var.prefix}-notifies-sns"
 
   assume_role_policy = <<EOF
 {
@@ -10,8 +10,7 @@ resource "aws_iam_role" "sns" {
       "Principal": {
         "Service": "autoscaling.amazonaws.com"
       },
-      "Effect": "Allow",
-      "Sid": ""
+      "Effect": "Allow"
     }
   ]
 }
@@ -23,8 +22,6 @@ EOF
 
 data "aws_iam_policy_document" "auto_scaling_notification_access" {
   statement {
-    sid = "1"
-
     actions = [
       "sqs:SendMessage",
       "sqs:GetQueueUrl",
@@ -38,7 +35,7 @@ data "aws_iam_policy_document" "auto_scaling_notification_access" {
 }
 
 resource "aws_iam_role_policy" "asg_notification_sns" {
-  name   = "${aws_iam_role.sns.name}-asg-notification-policy"
+  name   = "${var.prefix}-notifies-sns-permissions"
   role   = "${aws_iam_role.sns.id}"
   policy = "${data.aws_iam_policy_document.auto_scaling_notification_access.json}"
 }
@@ -53,8 +50,7 @@ resource "aws_iam_role" "lambda" {
       "Principal": {
         "Service": "lambda.amazonaws.com"
       },
-      "Effect": "Allow",
-      "Sid": ""
+      "Effect": "Allow"
     }
   ]
 }
@@ -63,8 +59,6 @@ EOF
 
 data "aws_iam_policy_document" "lambda" {
   statement {
-    sid = "1"
-
     actions = [
       "autoscaling:CompleteLifecycleAction",
       "logs:CreateLogGroup",
@@ -92,13 +86,13 @@ data "aws_iam_policy_document" "lambda" {
 }
 
 resource "aws_iam_role_policy" "lambda" {
-  name   = "${aws_iam_role.lambda.name}-policy"
+  name   = "${var.prefix}-lifecycle-lambda-permissions"
   role   = "${aws_iam_role.lambda.id}"
   policy = "${data.aws_iam_policy_document.lambda.json}"
 }
 
 resource "aws_iam_role_policy" "asg_notification_lambda" {
-  name   = "${aws_iam_role.lambda.name}-asg-notification-policy"
+  name   = "${var.prefix}-lifecycle-lambda-policy"
   role   = "${aws_iam_role.lambda.id}"
   policy = "${data.aws_iam_policy_document.auto_scaling_notification_access.json}"
 }
@@ -110,9 +104,9 @@ data "archive_file" "index" {
 }
 
 resource "aws_lambda_function" "lambda" {
+  function_name = "${var.prefix}-lifecycle-lambda"
   runtime       = "python2.7"
   filename      = "${path.module}/files/index.zip"
-  function_name = "${var.autoscaling_group_name}"
   role          = "${aws_iam_role.lambda.arn}"
   handler       = "index.lambda_handler"
 
@@ -145,7 +139,7 @@ resource "aws_sns_topic_subscription" "asg_sns" {
 
 resource "aws_autoscaling_lifecycle_hook" "terminate" {
   count                   = "${var.lambda_enabled}"
-  name                    = "${var.autoscaling_group_name}-terminate-hook"
+  name                    = "${var.prefix}-lifecycle-lambda-hook"
   autoscaling_group_name  = "${var.autoscaling_group_name}"
   default_result          = "${var.hook_default_result}"
   heartbeat_timeout       = "${var.hook_heartbeat_timeout}"
