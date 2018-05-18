@@ -128,7 +128,7 @@ resource "aws_lambda_permission" "sns" {
 }
 
 resource "aws_sns_topic" "asg_sns" {
-  name = "${var.autoscaling_group_name}-sns-topic"
+  name = "${var.prefix}-lifecycle-sns-topic"
 }
 
 resource "aws_sns_topic_subscription" "asg_sns" {
