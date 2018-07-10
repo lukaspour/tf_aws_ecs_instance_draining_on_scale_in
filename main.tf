@@ -1,5 +1,5 @@
 resource "aws_iam_role" "sns" {
-  name = "${var.prefix}-notifies-sns"
+  name = "${var.name_prefix}-lifecycle-sns"
 
   assume_role_policy = <<EOF
 {
@@ -35,12 +35,14 @@ data "aws_iam_policy_document" "auto_scaling_notification_access" {
 }
 
 resource "aws_iam_role_policy" "asg_notification_sns" {
-  name   = "${var.prefix}-notifies-sns-permissions"
+  name   = "${var.name_prefix}-lifecycle-sns-permissions"
   role   = "${aws_iam_role.sns.id}"
   policy = "${data.aws_iam_policy_document.auto_scaling_notification_access.json}"
 }
 
 resource "aws_iam_role" "lambda" {
+  name = "${var.name_prefix}-lifecycle-lambda"
+
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -86,13 +88,13 @@ data "aws_iam_policy_document" "lambda" {
 }
 
 resource "aws_iam_role_policy" "lambda" {
-  name   = "${var.prefix}-lifecycle-lambda-permissions"
+  name   = "${var.name_prefix}-lambda-lifecycle-policy"
   role   = "${aws_iam_role.lambda.id}"
   policy = "${data.aws_iam_policy_document.lambda.json}"
 }
 
 resource "aws_iam_role_policy" "asg_notification_lambda" {
-  name   = "${var.prefix}-lifecycle-lambda-policy"
+  name   = "${var.name_prefix}-lambda-sns-policy"
   role   = "${aws_iam_role.lambda.id}"
   policy = "${data.aws_iam_policy_document.auto_scaling_notification_access.json}"
 }
@@ -104,7 +106,7 @@ data "archive_file" "index" {
 }
 
 resource "aws_lambda_function" "lambda" {
-  function_name = "${var.prefix}-lifecycle-lambda"
+  function_name = "${var.name_prefix}-lifecycle-lambda"
   runtime       = "python2.7"
   filename      = "${path.module}/files/index.zip"
   role          = "${aws_iam_role.lambda.arn}"
@@ -128,7 +130,7 @@ resource "aws_lambda_permission" "sns" {
 }
 
 resource "aws_sns_topic" "asg_sns" {
-  name = "${var.prefix}-lifecycle-sns-topic"
+  name = "${var.name_prefix}-lifecycle-hook"
 }
 
 resource "aws_sns_topic_subscription" "asg_sns" {
@@ -138,8 +140,7 @@ resource "aws_sns_topic_subscription" "asg_sns" {
 }
 
 resource "aws_autoscaling_lifecycle_hook" "terminate" {
-  count                   = "${var.lambda_enabled}"
-  name                    = "${var.prefix}-lifecycle-lambda-hook"
+  name                    = "${var.name_prefix}-terminations"
   autoscaling_group_name  = "${var.autoscaling_group_name}"
   default_result          = "${var.hook_default_result}"
   heartbeat_timeout       = "${var.hook_heartbeat_timeout}"
