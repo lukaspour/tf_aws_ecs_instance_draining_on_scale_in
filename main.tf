@@ -105,10 +105,16 @@ data "archive_file" "index" {
   output_path = "${path.module}/files/index.zip"
 }
 
+data "null_data_source" "path-to-some-file" {
+  inputs {
+    filename = "${substr("${path.module}/files/index.zip", length(path.cwd) + 1, -1)}"
+  }
+}
+
 resource "aws_lambda_function" "lambda" {
   function_name = "${var.name_prefix}-lifecycle-lambda"
   runtime       = "python2.7"
-  filename      = "${path.module}/files/index.zip"
+  filename      = "${data.null_data_source.path-to-some-file.outputs.filename}"
   role          = "${aws_iam_role.lambda.arn}"
   handler       = "index.lambda_handler"
 
