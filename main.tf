@@ -123,7 +123,10 @@ resource "aws_lambda_function" "lambda" {
   lifecycle {
     # A workaround when running this code on different machines is to ignore changes, as described here:
     # https://github.com/hashicorp/terraform/issues/7613#issuecomment-241603087
-    ignore_changes = ["filename"]
+    ignore_changes = [
+      "filename",
+      "last_modified",
+    ]
   }
 }
 
