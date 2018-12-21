@@ -130,6 +130,11 @@ resource "aws_lambda_function" "lambda" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "lambda_log_group" {
+  name              = "/aws/lambda/${aws_lambda_function.lambda.function_name}"
+  retention_in_days = "${var.log_retention_in_days}"
+}
+
 resource "aws_lambda_permission" "sns" {
   statement_id  = "AllowExecutionFromSNS"
   function_name = "${aws_lambda_function.lambda.arn}"
