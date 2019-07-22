@@ -15,7 +15,7 @@ variable "autoscaling_group_name" {
 
 variable "function_sleep_time" {
   description = "Number of seconds the function should sleep before checking ECS Instance Task Count again"
-  default = 15
+  default     = 15
 }
 
 variable "lambda_enabled" {

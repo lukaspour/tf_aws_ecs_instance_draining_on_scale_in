@@ -38,8 +38,8 @@ data "aws_iam_policy_document" "auto_scaling_notification_access" {
 }
 
 resource "aws_iam_role_policy" "asg_notification_sns" {
-  name   = "${aws_iam_role.sns.name}-asg-notification-policy"
-  role   = aws_iam_role.sns.id
+  name = "${aws_iam_role.sns.name}-asg-notification-policy"
+  role = aws_iam_role.sns.id
   policy = data.aws_iam_policy_document.auto_scaling_notification_access.json
 }
 
@@ -115,7 +115,7 @@ resource "aws_lambda_function" "lambda" {
   function_name = "${substr(var.autoscaling_group_name, 0, min(64, length(var.autoscaling_group_name)))}"
   role          = aws_iam_role.lambda.arn
   handler       = "index.lambda_handler"
-  timeout       = "${var.function_sleep_time * 2}"
+  timeout       = var.function_sleep_time * 2
 
   source_code_hash = data.archive_file.index.output_base64sha256
 
