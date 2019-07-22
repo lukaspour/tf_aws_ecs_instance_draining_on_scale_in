@@ -39,8 +39,8 @@ data "aws_iam_policy_document" "auto_scaling_notification_access" {
 
 resource "aws_iam_role_policy" "asg_notification_sns" {
   name   = "${aws_iam_role.sns.name}-asg-notification-policy"
-  role   = "${aws_iam_role.sns.id}"
-  policy = "${data.aws_iam_policy_document.auto_scaling_notification_access.json}"
+  role   = aws_iam_role.sns.id
+  policy = data.aws_iam_policy_document.auto_scaling_notification_access.json
 }
 
 resource "aws_iam_role" "lambda" {
@@ -93,14 +93,14 @@ data "aws_iam_policy_document" "lambda" {
 
 resource "aws_iam_role_policy" "lambda" {
   name   = "${aws_iam_role.lambda.name}-policy"
-  role   = "${aws_iam_role.lambda.id}"
-  policy = "${data.aws_iam_policy_document.lambda.json}"
+  role   = aws_iam_role.lambda.id
+  policy = data.aws_iam_policy_document.lambda.json
 }
 
 resource "aws_iam_role_policy" "asg_notification_lambda" {
   name   = "${aws_iam_role.lambda.name}-asg-notification-policy"
-  role   = "${aws_iam_role.lambda.id}"
-  policy = "${data.aws_iam_policy_document.auto_scaling_notification_access.json}"
+  role   = aws_iam_role.lambda.id
+  policy = data.aws_iam_policy_document.auto_scaling_notification_access.json
 }
 
 data "archive_file" "index" {
@@ -112,18 +112,18 @@ data "archive_file" "index" {
 resource "aws_lambda_function" "lambda" {
   runtime       = "python3.6"
   filename      = "${path.module}/files/index.zip"
-  function_name = "${substr(var.autoscaling_group_name,0,min(64, length(var.autoscaling_group_name)))}"
-  role          = "${aws_iam_role.lambda.arn}"
+  function_name = "${substr(var.autoscaling_group_name, 0, min(64, length(var.autoscaling_group_name)))}"
+  role          = aws_iam_role.lambda.arn
   handler       = "index.lambda_handler"
   timeout       = "${var.function_sleep_time * 2}"
 
-  source_code_hash = "${data.archive_file.index.output_base64sha256}"
+  source_code_hash = data.archive_file.index.output_base64sha256
 
   environment {
     variables = {
-      REGION       = "${var.region}"
-      CLUSTER_NAME = "${var.cluster_name}"
-      SLEEP_TIME   = "${var.function_sleep_time}"
+      REGION       = var.region
+      CLUSTER_NAME = var.cluster_name
+      SLEEP_TIME   = var.function_sleep_time
     }
   }
 
@@ -136,10 +136,10 @@ resource "aws_lambda_function" "lambda" {
 
 resource "aws_lambda_permission" "sns" {
   statement_id  = "AllowExecutionFromSNS"
-  function_name = "${aws_lambda_function.lambda.arn}"
+  function_name = aws_lambda_function.lambda.arn
   action        = "lambda:InvokeFunction"
   principal     = "sns.amazonaws.com"
-  source_arn    = "${aws_sns_topic.asg_sns.arn}"
+  source_arn    = aws_sns_topic.asg_sns.arn
 }
 
 resource "aws_sns_topic" "asg_sns" {
@@ -147,18 +147,18 @@ resource "aws_sns_topic" "asg_sns" {
 }
 
 resource "aws_sns_topic_subscription" "asg_sns" {
-  topic_arn = "${aws_sns_topic.asg_sns.arn}"
+  topic_arn = aws_sns_topic.asg_sns.arn
   protocol  = "lambda"
-  endpoint  = "${aws_lambda_function.lambda.arn}"
+  endpoint  = aws_lambda_function.lambda.arn
 }
 
 resource "aws_autoscaling_lifecycle_hook" "terminate" {
-  count                   = "${var.lambda_enabled}"
+  count                   = var.lambda_enabled ? 1 : 0
   name                    = "${var.autoscaling_group_name}-terminate-hook"
-  autoscaling_group_name  = "${var.autoscaling_group_name}"
-  default_result          = "${var.hook_default_result}"
-  heartbeat_timeout       = "${var.hook_heartbeat_timeout}"
+  autoscaling_group_name  = var.autoscaling_group_name
+  default_result          = var.hook_default_result
+  heartbeat_timeout       = var.hook_heartbeat_timeout
   lifecycle_transition    = "autoscaling:EC2_INSTANCE_TERMINATING"
-  notification_target_arn = "${aws_sns_topic.asg_sns.arn}"
-  role_arn                = "${aws_iam_role.sns.arn}"
+  notification_target_arn = aws_sns_topic.asg_sns.arn
+  role_arn                = aws_iam_role.sns.arn
 }
